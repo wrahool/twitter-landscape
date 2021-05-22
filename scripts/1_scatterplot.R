@@ -41,7 +41,7 @@ genres <- c("hard news", "meme", "organization", "political pundit",
 
 
 elite_activity <- read_csv("data/elites_activity.csv")
-relevance_df <- read_csv("../echo-chamber-exp/important_results/rnr/oct 9/all_relevance_ideologies.csv")
+relevance_df <- read_csv("data/all_relevance_ideologies.csv")
 relevance_df <- relevance_df %>%
   select(userhandle, relevance_kw, relevance_delib) %>%
   mutate(handle = tolower(userhandle)) %>%
