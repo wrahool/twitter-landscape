@@ -1,0 +1,45 @@
+group1,group2,alt,p.adj,p.adj.signif
+brand,entertainment,lesser,0,****
+brand,hard news,greater,2.5499999999999987e-262,****
+brand,media outlet,lesser,7.37e-52,****
+brand,meme,greater,9.959999999999994e-304,****
+brand,organization,greater,1.849999999999999e-220,****
+brand,political figure,lesser,3.04e-11,****
+brand,political pundit,greater,2.21e-93,****
+brand,public figure,lesser,1.1399999999999998e-90,****
+brand,sports,lesser,1.1199999999999996e-138,****
+entertainment,hard news,greater,0,****
+entertainment,media outlet,greater,0,****
+entertainment,meme,greater,0,****
+entertainment,organization,greater,0,****
+entertainment,political figure,greater,0,****
+entertainment,political pundit,greater,0,****
+entertainment,public figure,greater,0,****
+entertainment,sports,greater,0,****
+hard news,media outlet,lesser,0,****
+hard news,meme,lesser,6.85e-12,****
+hard news,organization,lesser,4.06e-17,****
+hard news,political figure,lesser,0,****
+hard news,political pundit,lesser,3.0099999999999994e-143,****
+hard news,public figure,lesser,0,****
+hard news,sports,lesser,0,****
+media outlet,meme,greater,0,****
+media outlet,organization,greater,0,****
+media outlet,political figure,greater,1.88e-5,****
+media outlet,political pundit,greater,1.2199999999999993e-274,****
+media outlet,public figure,lesser,9.92e-10,****
+media outlet,sports,lesser,4.38e-60,****
+meme,political figure,lesser,0,****
+meme,political pundit,lesser,1.73e-16,****
+meme,public figure,lesser,0,****
+meme,sports,lesser,0,****
+organization,political figure,lesser,0,****
+organization,political pundit,lesser,4.76e-37,****
+organization,public figure,lesser,0,****
+organization,sports,lesser,0,****
+political figure,political pundit,greater,0,****
+political figure,public figure,lesser,3.4199999999999997e-34,****
+political figure,sports,lesser,5.24e-53,****
+political pundit,public figure,lesser,0,****
+political pundit,sports,lesser,3.2199999999999983e-264,****
+public figure,sports,lesser,8.69e-13,****

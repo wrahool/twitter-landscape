@@ -5,8 +5,10 @@ library(corrr)
 library(cowplot)
 library(broom)
 library(stargazer)
+library(modelsummary)
 library(knitr)
 library(ggridges)
+library(diptest)
 
 exclude_barbera_NAs <- FALSE
 MTurk_NA_threshold <- 100 # set to 100 for all elites
@@ -133,6 +135,26 @@ unweighted_distribution_plot <- viz_tbl %>%
 
 ggsave(file="figures/fig2.svg", plot=unweighted_distribution_plot, width=8, height=6)
 
+# RnR: are distributions unimodal?
+unimodal_tbl <- NULL
+for(t in c("perceived ideologies", "ideal points")) {
+  p_value <- viz_tbl %>% 
+    filter(type == t) %>% 
+    pull(ideology) %>% 
+    dip.test() %>%
+    tidy() %>%
+    pull(p.value)
+  
+  unimodal_tbl <- unimodal_tbl %>%
+    rbind(tibble_row(type = t, p_value = p_value))
+}
+
+unimodal_tbl %>%
+  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  rename("ideology type" = type) %>%
+  datasummary_df(output = "results/overall_unweighted_unimodal.tex", fmt = "%.5f")
+
+
 # paired wilcox test (are mturk ideologies significantly lesser than barbera ideologies)
 
 wilcoxon_comparison_tbl <- viz_tbl %>%
@@ -191,13 +213,38 @@ weighted_distribution_plot <- viz_tbl %>%
 
 ggsave(file="figures/fig3.svg", plot=weighted_distribution_plot, width=8, height=6)
 
+# RnR: are distributions bimodal?
+
+unimodal_tbl <- NULL
+for(t in c("perceived ideologies", "ideal points")) {
+  p_value <- viz_tbl %>% 
+    filter(type == t) %>% 
+    pull(weighted_ideology) %>% 
+    dip.test() %>%
+    tidy() %>%
+    pull(p.value)
+  
+  unimodal_tbl <- unimodal_tbl %>%
+    rbind(tibble_row(type = t, p_value = p_value))
+}
+
+unimodal_tbl %>%
+  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  rename("ideology type" = type) %>%
+  datasummary_df(output = "results/overall_weighted_unimodal.tex", fmt = "%.5f")
+
+
 # paired wilcox test (are mturk ideologies significantly lesser than barbera ideologies)
 
 wilcoxon_comparison_tbl <- viz_tbl %>%
   pivot_wider(values_from = weighted_ideology, names_from = type) %>%
   select(`ideal points`, `perceived ideologies`)
 
-wilcox.test(wilcoxon_comparison_tbl$`perceived ideologies`, wilcoxon_comparison_tbl$`ideal points`, paired = TRUE, alternative = "less") %>% tidy()
+wilcox.test(wilcoxon_comparison_tbl$`perceived ideologies`, wilcoxon_comparison_tbl$`ideal points`, paired = TRUE, alternative = "less") %>% 
+  tidy() %>%
+  rename("V_statistic" = 1, "p_value" = 2) %>%
+  select(-method) %>%
+  datasummary_df(output = "results/overall_wilcox.tex", fmt = "%.5f")
 
 ########################################
 # within deciles
@@ -245,6 +292,31 @@ decile_plots <- ggplot(viz_tbl, aes(x = ideology, y = as.factor(decile),
 
 ggsave(file="figures/fig4.svg", plot=decile_plots, width=8, height=6)
 
+# RnR: are distributions bimodal?
+unimodality_p_values <- NULL
+for(d in 1:10) {
+  for(t in c("perceived ideologies", "ideal points")) {
+    
+    message(paste(d, " : ", t))
+    
+    p_value <- viz_tbl %>% 
+      filter(type == t, decile == d) %>% 
+      pull(ideology) %>% 
+      dip.test() %>%
+      tidy() %>%
+      pull(p.value)
+    
+    unimodality_p_values <- unimodality_p_values %>%
+      rbind(tibble_row(decile = d, t = t, p_value = p_value))
+    
+    }
+}
+
+unimodality_p_values %>%
+  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  rename("ideology type" = t) %>%
+  datasummary_df(output = "results/decile_unweighted_unimodal.tex", fmt = "%.5f")
+
 dec_wilcox_tbl <- NULL
 for(dec in unique(viz_tbl$decile)){
   message(dec)
@@ -256,15 +328,11 @@ for(dec in unique(viz_tbl$decile)){
   
   curr_wilcox_test <- wilcox.test(wilcoxon_comparison_tbl$`perceived ideologies`, wilcoxon_comparison_tbl$`ideal points`, paired = TRUE, alternative = "less") %>% tidy()
   dec_wilcox_tbl <- dec_wilcox_tbl %>%
-    rbind(c(dec, curr_wilcox_test))
+    rbind(tibble_row(decile = dec, v_statistic = curr_wilcox_test$statistic, p_value = curr_wilcox_test$p.value, alternative = curr_wilcox_test$alternative))
 }
 
-dec_wilcox_tbl <- dec_wilcox_tbl %>%
-  data.frame() %>%
-  rename(decile = 1, v_statistic = 2, p_value = 3) %>%
-  select(-method)
-
-kable(dec_wilcox_tbl, "latex")
+dec_wilcox_tbl %>%
+  datasummary_df(output = "results/decile_wilcox.tex", fmt = "%.5f")
 
 ########################################
 # within genres unweighted
@@ -349,6 +417,31 @@ unweighted_genre_ridgeplots <- ggplot(viz_tbl, aes(x=ideology, y = genre, fill =
 
 ggsave(file="figures/FigA1.svg", plot=unweighted_genre_ridgeplots, width=8, height=6)
 
+# RnR: unimodal?
+unimodality_p_values <- NULL
+for(g in unique(viz_tbl$genre)) {
+  for(t in c("perceived ideologies", "ideal points")) {
+    
+    message(paste(d, " : ", t))
+    
+    p_value <- viz_tbl %>% 
+      filter(genre == g, type == t) %>% 
+      pull(ideology) %>% 
+      dip.test() %>%
+      tidy() %>%
+      pull(p.value)
+    
+    unimodality_p_values <- unimodality_p_values %>%
+      rbind(tibble_row(genre = g, t = t, p_value = p_value))
+    
+  }
+}
+
+unimodality_p_values %>%
+  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  rename("ideology type" = t) %>%
+  datasummary_df(output = "results/genre_unweighted_unimodality.tex", fmt = "%.5f")
+
 genre_wilcox_tbl <- NULL
 for(g in unique(viz_tbl$genre)){
   message(g)
@@ -364,9 +457,11 @@ for(g in unique(viz_tbl$genre)){
     tidy()
   
   genre_wilcox_tbl <- genre_wilcox_tbl %>%
-    rbind(c(g, curr_wilcox_tbl))
+    rbind(tibble_row(genre = g, V_statistic = curr_wilcox_tbl$statistic, p_value = curr_wilcox_tbl$p.value, alternative = curr_wilcox_tbl$alternative))
 }
 
+genre_wilcox_tbl %>%
+  datasummary_df("results/genre_unweighted_wilcox.tex", fmt = "%.5f")
 
 # within genres weighted
 
@@ -411,6 +506,31 @@ genre_ridgeplots <- plot_grid(plotlist = list(unweighted_genre_ridgeplots, weigh
 
 ggsave(file="figures/fig5extra.svg", plot=genre_ridgeplots, width=8, height=12)
 
+# RnR: unimodal?
+unimodality_p_values <- NULL
+for(g in unique(viz_tbl$genre)) {
+  for(t in c("perceived ideologies", "ideal points")) {
+    
+    message(paste(d, " : ", t))
+    
+    p_value <- viz_tbl %>% 
+      filter(genre == g, type == t) %>% 
+      pull(weighted_ideology) %>% 
+      dip.test() %>%
+      tidy() %>%
+      pull(p.value)
+    
+    unimodality_p_values <- unimodality_p_values %>%
+      rbind(tibble_row(genre = g, t = t, p_value = p_value))
+    
+  }
+}
+
+unimodality_p_values %>%
+  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  rename("ideology type" = 2) %>%
+  datasummary_df(output = "results/genre_weighted_unimodality.tex")
+
 genre_wilcox_tbl <- NULL
 for(g in unique(viz_tbl$genre)){
   message(g)
@@ -424,16 +544,12 @@ for(g in unique(viz_tbl$genre)){
     tidy()
   
   genre_wilcox_tbl <- genre_wilcox_tbl %>%
-    rbind(c(g, curr_wilcox_tbl))
+    rbind(tibble_row(genre = g, V_statistic = curr_wilcox_tbl$statistic, p_value = curr_wilcox_tbl$p.value, alternative = curr_wilcox_tbl$alternative))
 }
 
-genre_wilcox_tbl <- genre_wilcox_tbl %>%
-  data.frame() %>%
-  rename(genre = 1, v_statistic = 2, p_value = 3) %>%
-  select(genre, v_statistic, p_value, alternative)
+genre_wilcox_tbl %>%
+  datasummary_df(output = "genre_weighted_wilcox.tex", fmt = "%.5f")
 
-kable(genre_wilcox_tbl, "latex")
-stargazer(genre_wilcox_tbl)
 
 all_plots <- ls()[grep("plot", ls())]
 
