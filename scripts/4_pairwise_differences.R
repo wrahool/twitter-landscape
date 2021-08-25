@@ -6,6 +6,7 @@ library(ggridges)
 library(cowplot)
 library(svglite)
 library(rstatix)
+library(modelsummary)
 
 elite_df <- read_csv("data/mturk_ideologies.csv")
 elites <- elite_df$handle
@@ -21,6 +22,9 @@ following_tbl <- following_df %>%
 
 elite_following_tbl <- following_tbl %>%
   filter(tolower(following) %in% tolower(elites))
+
+# number of users who don't follow any elites
+length(unique(following_tbl$user)) - length(unique(elite_following_tbl$user))
 
 
 elite_following_tbl <- elite_following_tbl %>%
@@ -110,11 +114,40 @@ user_elite_genre_count <- elite_following_genre_tbl %>%
   group_by(user) %>%
   count(genre)
 
+user_elite_genre_count2 <- user_elite_genre_count %>%
+  mutate(genre2 = ifelse(genre %in% c("hard news", "media outlet", "political figure", "political pundit"), "p", "np")) %>%
+  group_by(user, genre2) %>%
+  summarize(n2 = sum(n)) %>%
+  pivot_wider(names_from = genre2, values_from = n2) %>%
+  mutate(p = ifelse(is.na(p), 0, p),
+         np = ifelse(is.na(np), 0, np)) %>%
+  mutate(np_p_ratio = np/p) %>%
+  mutate(inf_or_no = (np_p_ratio == Inf))
+
+user_elite_genre_count2 %>%
+  pull(inf_or_no) %>%
+  table()
+
+# FALSE  TRUE 
+# 6246  2403 
+
+# of the users who followed at least 1 opinion leader, 2403/(2403+6246) = ~28% didn't follow a single political or news / media opinion leader
+
+user_elite_genre_count2 %>%
+  filter(np_p_ratio < Inf) %>%
+  pull(np_p_ratio) %>%
+  median()
+
+#4.5. those who followed at least 1 political (including news and media) opinion leader and at least 1 non-political opinion leader, 
+# were more likely to follow, on average, 8.4 times (median 4.5) as many non-political opinion leader compared to political opinion leaders
+
 # do individuals follow non-political elites less than political elites?
 user_genre_count <- ggplot(user_elite_genre_count) +
   geom_boxplot(aes(x=n, y=reorder(genre,n))) +
   labs(x="# opinion leaders followed by ordinary users", y = "genre") +
-  theme_bw() # yes, they do
+  theme_bw() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14)) # yes, they do
 
 # for those users who don't follow any elites of certain genres, insert 0 for those combinations
 user_elite_genre_count_full <- expand.grid(unique(user_elite_genre_count$user), unique(user_elite_genre_count$genre)) %>%
@@ -129,23 +162,34 @@ wilcox_results_less <- user_elite_genre_count_full %>%
   wilcox_test(n ~ genre, p.adjust.method = "holm", paired = T, alternative = "l")
 
 wilcox_results_less2 <- wilcox_results_less %>%
-  select(group1, group2, p.adj, p.adj.signif) %>%
+  select(group1, group2, statistic, p.adj, p.adj.signif) %>%
   mutate(alt = "lesser") %>%
   filter(p.adj.signif != "ns") %>%
-  select(group1, group2, alt, p.adj, p.adj.signif)
+  select(group1, group2, statistic, alt, p.adj, p.adj.signif)
 
 wilcox_results_greater <- user_elite_genre_count_full %>%
   ungroup() %>%
   wilcox_test(n ~ genre, p.adjust.method = "holm", paired = T, alternative = "g")
 
 wilcox_results_greater2 <- wilcox_results_greater %>%
-  select(group1, group2, p.adj, p.adj.signif) %>%
+  select(group1, group2, statistic, p.adj, p.adj.signif) %>%
   mutate(alt = "greater") %>%
   filter(p.adj.signif != "ns") %>%
-  select(group1, group2, alt, p.adj, p.adj.signif)
+  select(group1, group2, statistic, alt, p.adj, p.adj.signif)
+
+wilcox_results_unequal <- user_elite_genre_count_full %>%
+  ungroup() %>%
+  wilcox_test(n ~ genre, p.adjust.method = "holm", paired = T)
+
+wilcox_results_unequal2 <- wilcox_results_unequal %>%
+  select(group1, group2, statistic, p.adj, p.adj.signif) %>%
+  mutate(alt = "unequal") %>%
+  filter(p.adj.signif == "ns") %>%
+  select(group1, group2, statistic, alt, p.adj, p.adj.signif)
 
 sig_wilcox_results <- wilcox_results_greater2 %>%
   rbind(wilcox_results_less2) %>%
+  rbind(wilcox_results_unequal2) %>%
   arrange(group1, group2)
 
 # compare elites versus non-elites
@@ -176,16 +220,28 @@ o_user_friend_long_tbl <- o_user_friend_tbl %>%
   mutate(type = ifelse(type == "elite_count", "opinion leader", "non opinion leader"))
 
 user_elite_nonelite <- ggplot(o_user_friend_long_tbl) +
-  geom_boxplot(aes(x=count, y=type)) +
-  labs(x="# of accounts followed") +
-  theme_bw()
+  geom_boxplot(aes(x=count, y=reorder(type, count))) +
+  labs(x="# of accounts followed by ordinary users", y = "type") +
+  theme_bw() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14))
 
 o_user_friend_long_tbl %>%
   wilcox_test(count ~ type, paired = T, alternative = "greater") %>%
-  add_significance()
+  add_significance() %>%
+  mutate(alternative = "greater") %>%
+  select(group1, group2, alternative, statistic, p, p.signif) %>%
+  rename(genre1 = 1, genre2 = 2) %>%
+  datasummary_df(output = "results/per_user_elite_vs_nonelite.tex")
 
-plot_grid(plotlist = list(user_genre_count, user_elite_nonelite), nrow = 2, align = T)
+rnr_plot1 <- plot_grid(plotlist = list(user_genre_count, user_elite_nonelite),
+          nrow = 2,
+          align = T,
+          rel_heights = c(3.5, 1),
+          labels = LETTERS[1:2])
+
+ggsave(file="figures/rnr_fig1.svg", plot=rnr_plot1, width=10, height=7)
 
 sig_wilcox_results %>%
-  rename(genre1 = 1, genre = 2, alternative = 3) %>%
+  rename(genre1 = 1, genre2 = 2, alternative = "alt") %>%
   datasummary_df(output = "results/per_user_genre_wilcox.tex", fmt = "%.5f")

@@ -138,19 +138,24 @@ ggsave(file="figures/fig2.svg", plot=unweighted_distribution_plot, width=8, heig
 # RnR: are distributions unimodal?
 unimodal_tbl <- NULL
 for(t in c("perceived ideologies", "ideal points")) {
-  p_value <- viz_tbl %>% 
+  dip_test <- viz_tbl %>% 
     filter(type == t) %>% 
     pull(ideology) %>% 
     dip.test() %>%
-    tidy() %>%
+    tidy()
+  
+  HDS <- dip_test %>%
+    pull(statistic)
+    
+  p_value <- dip_test %>%
     pull(p.value)
   
   unimodal_tbl <- unimodal_tbl %>%
-    rbind(tibble_row(type = t, p_value = p_value))
+    rbind(tibble_row(type = t, HDS = HDS, p_value = p_value))
 }
 
 unimodal_tbl %>%
-  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  # mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
   rename("ideology type" = type) %>%
   datasummary_df(output = "results/overall_unweighted_unimodal.tex", fmt = "%.5f")
 
@@ -217,19 +222,24 @@ ggsave(file="figures/fig3.svg", plot=weighted_distribution_plot, width=8, height
 
 unimodal_tbl <- NULL
 for(t in c("perceived ideologies", "ideal points")) {
-  p_value <- viz_tbl %>% 
+  dip_test <- viz_tbl %>% 
     filter(type == t) %>% 
     pull(weighted_ideology) %>% 
     dip.test() %>%
-    tidy() %>%
+    tidy()
+  
+  HDS <- dip_test %>%
+    pull(statistic)
+  
+  p_value <- dip_test %>%
     pull(p.value)
   
   unimodal_tbl <- unimodal_tbl %>%
-    rbind(tibble_row(type = t, p_value = p_value))
+    rbind(tibble_row(type = t, HDS = HDS,  p_value = p_value))
 }
 
 unimodal_tbl %>%
-  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  # mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
   rename("ideology type" = type) %>%
   datasummary_df(output = "results/overall_weighted_unimodal.tex", fmt = "%.5f")
 
@@ -299,21 +309,26 @@ for(d in 1:10) {
     
     message(paste(d, " : ", t))
     
-    p_value <- viz_tbl %>% 
+    dip_test <- viz_tbl %>% 
       filter(type == t, decile == d) %>% 
       pull(ideology) %>% 
       dip.test() %>%
-      tidy() %>%
+      tidy()
+      
+    HDS <- dip_test %>%
+      pull(statistic)
+    
+    p_value <- dip_test %>%
       pull(p.value)
     
     unimodality_p_values <- unimodality_p_values %>%
-      rbind(tibble_row(decile = d, t = t, p_value = p_value))
+      rbind(tibble_row(decile = d, t = t, HDS = HDS, p_value = p_value))
     
     }
 }
 
 unimodality_p_values %>%
-  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  # mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
   rename("ideology type" = t) %>%
   datasummary_df(output = "results/decile_unweighted_unimodal.tex", fmt = "%.5f")
 
@@ -415,30 +430,40 @@ unweighted_genre_ridgeplots <- ggplot(viz_tbl, aes(x=ideology, y = genre, fill =
         axis.title=element_text(size=14),
         strip.text.x = element_text(size = 12))
 
-ggsave(file="figures/FigA1.svg", plot=unweighted_genre_ridgeplots, width=8, height=6)
+# this is the only robustness plot in the main script
+ggsave(file="figures/FigA2-robustness.svg", plot=unweighted_genre_ridgeplots, width=8, height=6)
 
 # RnR: unimodal?
 unimodality_p_values <- NULL
 for(g in unique(viz_tbl$genre)) {
   for(t in c("perceived ideologies", "ideal points")) {
     
-    message(paste(d, " : ", t))
+    message(paste(g, " : ", t))
     
-    p_value <- viz_tbl %>% 
+    dip_test <- viz_tbl %>% 
       filter(genre == g, type == t) %>% 
       pull(ideology) %>% 
       dip.test() %>%
-      tidy() %>%
-      pull(p.value)
+      tidy()
     
     unimodality_p_values <- unimodality_p_values %>%
-      rbind(tibble_row(genre = g, t = t, p_value = p_value))
+      rbind(tibble_row(genre = g, t = t, HDS = dip_test$statistic, p_value = dip_test$p.value))
     
   }
 }
 
+# test
 unimodality_p_values %>%
-  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  ggplot() +
+  geom_bar(aes(x=HDS, y=genre, fill = t), stat = "identity") +
+  facet_wrap(~t) +
+  geom_vline(xintercept = 0.05, linetype = "dashed", color = "red") +
+  theme_bw() +
+  labs(x="Hartigan's Dip Statistic")
+
+
+unimodality_p_values %>%
+  # mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
   rename("ideology type" = t) %>%
   datasummary_df(output = "results/genre_unweighted_unimodality.tex", fmt = "%.5f")
 
@@ -499,6 +524,17 @@ weighted_genre_ridgeplots <- ggplot(viz_tbl, aes(x=weighted_ideology, y = genre,
         axis.title=element_text(size=14),
         strip.text.x = element_text(size = 12))
 
+weighted_genre_ridgeplots2 <- ggplot(viz_tbl, aes(x=weighted_ideology, y = genre, fill = type, height = stat(density)))+
+  geom_density_ridges(stat = "density") +
+  geom_vline(xintercept=0, linetype="dashed") +
+  labs(x = "ideology", y = "genre") +
+  facet_wrap(~type)+
+  theme_bw()+
+  theme(legend.position = "none") +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14),
+        strip.text.x = element_text(size = 12))
+
 ggsave(file="figures/fig5.svg", plot=weighted_genre_ridgeplots, width=8, height=6)
 
 genre_ridgeplots <- plot_grid(plotlist = list(unweighted_genre_ridgeplots, weighted_genre_ridgeplots),
@@ -511,23 +547,28 @@ unimodality_p_values <- NULL
 for(g in unique(viz_tbl$genre)) {
   for(t in c("perceived ideologies", "ideal points")) {
     
-    message(paste(d, " : ", t))
+    message(paste(g, " : ", t))
     
-    p_value <- viz_tbl %>% 
+    dip_test <- viz_tbl %>% 
       filter(genre == g, type == t) %>% 
       pull(weighted_ideology) %>% 
       dip.test() %>%
-      tidy() %>%
+      tidy()
+    
+    HDS <- dip_test %>%
+      pull(statistic)
+    
+    p_value <- dip_test %>%
       pull(p.value)
     
     unimodality_p_values <- unimodality_p_values %>%
-      rbind(tibble_row(genre = g, t = t, p_value = p_value))
+      rbind(tibble_row(genre = g, t = t, HDS = HDS, p_value = p_value))
     
   }
 }
 
 unimodality_p_values %>%
-  mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
+  # mutate(modality = ifelse(p_value >= 0.05, "unimodal", "not unimodal")) %>%
   rename("ideology type" = 2) %>%
   datasummary_df(output = "results/genre_weighted_unimodality.tex")
 
@@ -548,7 +589,7 @@ for(g in unique(viz_tbl$genre)){
 }
 
 genre_wilcox_tbl %>%
-  datasummary_df(output = "genre_weighted_wilcox.tex", fmt = "%.5f")
+  datasummary_df(output = "results/genre_weighted_wilcox.tex", fmt = "%.5f")
 
 
 all_plots <- ls()[grep("plot", ls())]
