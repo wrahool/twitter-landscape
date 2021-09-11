@@ -42,10 +42,32 @@ genres <- c("hard news", "meme", "organization", "political pundit",
 
 elite_activity <- read_csv("data/elites_activity.csv")
 relevance_df <- read_csv("data/all_relevance_ideologies.csv")
+
 relevance_df <- relevance_df %>%
   select(userhandle, relevance_kw, relevance_delib) %>%
   mutate(handle = tolower(userhandle)) %>%
   select(-userhandle)
+
+# this chunk is to see if imputing the relevance of elites with NA relevance as 0 changes Fig 1b. It doesn't.
+
+# weak_elites <- read_csv("data/weak_elite_ideologies.csv")
+# 
+# relevance_df <- relevance_df %>%
+#   select(userhandle, relevance_kw, relevance_delib) %>%
+#   mutate(handle = tolower(userhandle)) %>%
+#   select(-userhandle)
+# 
+# elites_without_relevance <- weak_elites %>%
+#   mutate(username = tolower(username)) %>%
+#   filter(!username %in% relevance_df$handle)
+# 
+# relevance_df <- relevance_df %>%
+#   rbind(tibble(
+#     relevance_kw = 0,
+#     relevance_delib = 0,
+#     handle = elites_without_relevance$username
+#   ))
+
 
 relevance_df %>%
   filter(handle %in% tolower(top_20$.))
@@ -141,5 +163,5 @@ fig1 <- plot_grid(plotlist = list(fig1a_plot, fig1b_plot), ncol = 2,
                   align = "h", axis = "b", rel_widths = c(1.5, 1),
                   labels = "AUTO")
 
-ggsave(file="figures/fig1.svg", plot=fig1, width=10, height=5.2)
-ggsave(file="figures/fig1x.jpg", device = "jpeg", plot=fig1, width=10, height=5.2)
+ggsave(file="figures/svg/fig1.svg", plot=fig1, width=10, height=5.2)
+ggsave(file="figures/jpg/fig1.jpg", device = "jpeg", plot=fig1, width=10, height=5.2)

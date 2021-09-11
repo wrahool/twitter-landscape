@@ -8,6 +8,7 @@ library(modelsummary)
 library(knitr)
 library(ggridges)
 library(diptest)
+library(glue)
 
 exclude_barbera_NAs <- FALSE
 MTurk_NA_threshold <- 100 # set to 100 for all elites
@@ -384,3 +385,36 @@ withNAs <- ordinary_ideologies %>%
 ordinary_ideology_plot <- plot_grid(plotlist = list(withoutNAs, withNAs), labels = "AUTO")
 
 ggsave(file="figures/FigA4-robustness.svg", plot=ordinary_ideology_plot, width=8, height=6)
+
+# rank correlation of opinion leader follower counts across 10 samples
+
+load("data/master_edge_list.Rdata")
+barbera_tbl <- read_csv("data/weak_elite_ideologies.csv")
+#barbera_tbl <- read_csv("data/strong_elites.csv")
+
+sample_followers_list <- list()
+for(s in 1:10) {
+  sample_users <- read_csv(glue("data/samples/{s}.csv"))
+  sample_following_df <- following_df %>%
+    filter(X1 %in% sample_users$handle)
+  
+  sample_elite_followers <- sample_following_df %>%
+    pull(X2) %>%
+    table() %>%
+    as_tibble() %>%
+    rename("elite" = 1, !!glue("followers_in_sample_{s}") := 2) %>%
+    filter(elite %in% barbera_tbl$username)
+
+  sample_followers_list[[s]] <- sample_elite_followers
+}
+
+all_samples_followers_list <- sample_followers_list %>% reduce(inner_join, by = "elite")
+
+cor_matrix <- all_samples_followers_list %>%
+  select(-elite) %>%
+  cor(method = "spearman")
+
+cor_matrix[lower.tri(cor_matrix)] %>% 
+  summary()
+
+cor.test(all_samples_followers_list$followers_in_sample_1, all_samples_followers_list$followers_in_sample_2, method = "spearman")

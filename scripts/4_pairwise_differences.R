@@ -142,7 +142,7 @@ user_elite_genre_count2 %>%
 # were more likely to follow, on average, 8.4 times (median 4.5) as many non-political opinion leader compared to political opinion leaders
 
 # do individuals follow non-political elites less than political elites?
-user_genre_count <- ggplot(user_elite_genre_count) +
+user_genre_count <- ggplot(user_elite_genre_count_full) +
   geom_boxplot(aes(x=n, y=reorder(genre,n))) +
   labs(x="# opinion leaders followed by ordinary users", y = "genre") +
   theme_bw() +
@@ -156,7 +156,7 @@ user_elite_genre_count_full <- expand.grid(unique(user_elite_genre_count$user), 
   left_join(user_elite_genre_count) %>%
   mutate(n = ifelse(is.na(n), 0, n))
 
-# "but but ... iNFeRentIaL sTAtS
+# wilcox test
 wilcox_results_less <- user_elite_genre_count_full %>%
   ungroup() %>%
   wilcox_test(n ~ genre, p.adjust.method = "holm", paired = T, alternative = "l")
@@ -191,6 +191,26 @@ sig_wilcox_results <- wilcox_results_greater2 %>%
   rbind(wilcox_results_less2) %>%
   rbind(wilcox_results_unequal2) %>%
   arrange(group1, group2)
+
+user_elite_genre_count_full %>% 
+  group_by(genre) %>%
+  summarise(median_n = median(n),
+            mean_n = mean(n)) %>% 
+  arrange(desc(median_n))
+
+# # A tibble: 10 x 2
+# genre            median_n
+# <chr>               <dbl>
+# 1 entertainment          10
+# 2 brand                   1
+# 3 media outlet            1
+# 4 political figure        1
+# 5 public figure           1
+# 6 sports                  1
+# 7 hard news               0
+# 8 meme                    0
+# 9 organization            0
+# 10 political pundit       0
 
 # compare elites versus non-elites
 
@@ -240,7 +260,8 @@ rnr_plot1 <- plot_grid(plotlist = list(user_genre_count, user_elite_nonelite),
           rel_heights = c(3.5, 1),
           labels = LETTERS[1:2])
 
-ggsave(file="figures/rnr_fig1.svg", plot=rnr_plot1, width=10, height=7)
+ggsave(file="figures/svg/fig2.svg", plot=rnr_plot1, width=10, height=7)
+ggsave(file="figures/jpg/fig2.jpg", device = "jpeg", plot=rnr_plot1, width=10, height=7)
 
 sig_wilcox_results %>%
   rename(genre1 = 1, genre2 = 2, alternative = "alt") %>%

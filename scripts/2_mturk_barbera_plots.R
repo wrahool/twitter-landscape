@@ -133,7 +133,8 @@ unweighted_distribution_plot <- viz_tbl %>%
         legend.background = element_blank(),
         legend.box.background = element_rect(colour = "black"))
 
-ggsave(file="figures/fig2.svg", plot=unweighted_distribution_plot, width=8, height=6)
+ggsave(file="figures/svg/fig3.svg", plot=unweighted_distribution_plot, width=8, height=6)
+ggsave(file="figures/jpg/fig3.jpg", device = "jpeg", plot=unweighted_distribution_plot, width=8, height=6)
 
 # RnR: are distributions unimodal?
 unimodal_tbl <- NULL
@@ -216,7 +217,8 @@ weighted_distribution_plot <- viz_tbl %>%
         legend.background = element_blank(),
         legend.box.background = element_rect(colour = "black"))
 
-ggsave(file="figures/fig3.svg", plot=weighted_distribution_plot, width=8, height=6)
+ggsave(file="figures/svg/fig4.svg", plot=weighted_distribution_plot, width=8, height=6)
+ggsave(file="figures/jpg/fig4.jpg", device = "jpeg", plot=weighted_distribution_plot, width=8, height=6)
 
 # RnR: are distributions bimodal?
 
@@ -300,7 +302,9 @@ decile_plots <- ggplot(viz_tbl, aes(x = ideology, y = as.factor(decile),
         axis.title=element_text(size=14),
         strip.text.x = element_text(size = 12))
 
-ggsave(file="figures/fig4.svg", plot=decile_plots, width=8, height=6)
+ggsave(file="figures/svg/fig5.svg", plot=decile_plots, width=8, height=6)
+ggsave(file="figures/jpg/fig5.jpg", device= "jpeg", plot=decile_plots, width=8, height=6)
+
 
 # RnR: are distributions bimodal?
 unimodality_p_values <- NULL
@@ -431,7 +435,7 @@ unweighted_genre_ridgeplots <- ggplot(viz_tbl, aes(x=ideology, y = genre, fill =
         strip.text.x = element_text(size = 12))
 
 # this is the only robustness plot in the main script
-ggsave(file="figures/FigA2-robustness.svg", plot=unweighted_genre_ridgeplots, width=8, height=6)
+ggsave(file="figures/svg/FigA2-robustness.svg", plot=unweighted_genre_ridgeplots, width=8, height=6)
 
 # RnR: unimodal?
 unimodality_p_values <- NULL
@@ -535,7 +539,8 @@ weighted_genre_ridgeplots2 <- ggplot(viz_tbl, aes(x=weighted_ideology, y = genre
         axis.title=element_text(size=14),
         strip.text.x = element_text(size = 12))
 
-ggsave(file="figures/fig5.svg", plot=weighted_genre_ridgeplots, width=8, height=6)
+ggsave(file="figures/svg/fig6.svg", plot=weighted_genre_ridgeplots, width=8, height=6)
+ggsave(file="figures/jpg/fig6.jpg", device = "jpeg", plot=weighted_genre_ridgeplots, width=8, height=6)
 
 genre_ridgeplots <- plot_grid(plotlist = list(unweighted_genre_ridgeplots, weighted_genre_ridgeplots),
                               labels = "AUTO", ncol = 1, align = "v")
